@@ -30,6 +30,11 @@ dependencies = [
     "click>=8.1",
 ]
 
+[project.urls]
+"Homepage" = "https://github.com/envpatch/envpatch"
+"Bug Tracker" = "https://github.com/envpatch/envpatch/issues"
+"Changelog" = "https://github.com/envpatch/envpatch/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
@@ -43,6 +48,5 @@ envpatch = "envpatch.cli:main"
 testpaths = ["tests"]
 addopts = "--tb=short"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool["."]
 include = ["envpatch*"]
