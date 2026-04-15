@@ -1,69 +1,82 @@
-"""Command-line interface for envpatch."""
+"""CLI entry points for envpatch."""
 
 import sys
-from pathlib import Path
-
 import click
-
 from envpatch.parser import parse_env_file
 from envpatch.differ import diff_envs
 from envpatch.patcher import apply_patch_from_diff, serialize_env
+from envpatch.validator import validate_env_string
 
 
 @click.group()
-@click.version_option()
 def cli():
-    """envpatch — diff and apply .env file changes across environments."""
+    """envpatch — diff and apply .env file changes safely."""
+    pass
 
 
-@cli.command("diff")
-@click.argument("base", type=click.Path(exists=True, dir_okay=False))
-@click.argument("target", type=click.Path(exists=True, dir_okay=False))
-@click.option("--show-unchanged", is_flag=True, default=False, help="Include unchanged keys in output.")
-def diff_cmd(base, target, show_unchanged):
-    """Show differences between BASE and TARGET .env files."""
-    base_env = parse_env_file(base)
-    target_env = parse_env_file(target)
-    result = diff_envs(base_env, target_env)
-
-    changes = list(result.changes(include_unchanged=show_unchanged))
+@cli.command(name="diff")
+@click.argument("base_file", type=click.Path(exists=True))
+@click.argument("target_file", type=click.Path(exists=True))
+@click.option("--include-unchanged", is_flag=True, default=False, help="Show unchanged keys too.")
+def diff_cmd(base_file, target_file, include_unchanged):
+    """Show differences between BASE_FILE and TARGET_FILE."""
+    base = parse_env_file(base_file)
+    target = parse_env_file(target_file)
+    result = diff_envs(base, target)
+    changes = result.all_changes if include_unchanged else result.changed
     if not changes:
         click.echo("No differences found.")
         return
-
     for change in changes:
         click.echo(str(change))
 
 
-@cli.command("apply")
-@click.argument("base", type=click.Path(exists=True, dir_okay=False))
-@click.argument("patch", type=click.Path(exists=True, dir_okay=False))
-@click.option(
-    "--output", "-o",
-    type=click.Path(dir_okay=False),
-    default=None,
-    help="Output file path. Defaults to overwriting BASE.",
-)
-@click.option("--dry-run", is_flag=True, default=False, help="Print result without writing.")
-def apply_cmd(base, patch, output, dry_run):
-    """Apply PATCH .env onto BASE without overwriting existing keys."""
-    base_env = parse_env_file(base)
-    patch_env = parse_env_file(patch)
-    result = diff_envs(base_env, patch_env)
-    patched = apply_patch_from_diff(base_env, result)
+@cli.command(name="apply")
+@click.argument("base_file", type=click.Path(exists=True))
+@click.argument("patch_file", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), default=None, help="Output file (default: stdout).")
+@click.option("--overwrite", is_flag=True, default=False, help="Overwrite existing keys.")
+@click.option("--validate", is_flag=True, default=False, help="Validate patch file before applying.")
+def apply_cmd(base_file, patch_file, output, overwrite, validate):
+    """Apply PATCH_FILE onto BASE_FILE."""
+    if validate:
+        with open(patch_file) as f:
+            raw = f.read()
+        result = validate_env_string(raw)
+        if not result.is_valid:
+            click.echo(str(result), err=True)
+            sys.exit(1)
+
+    base = parse_env_file(base_file)
+    patch = parse_env_file(patch_file)
+    diff = diff_envs(base, patch)
+    patched = apply_patch_from_diff(base, diff, overwrite=overwrite)
     serialized = serialize_env(patched)
 
-    if dry_run:
-        click.echo(serialized)
-        return
+    if output:
+        with open(output, "w") as f:
+            f.write(serialized)
+        click.echo(f"Written to {output}")
+    else:
+        click.echo(serialized, nl=False)
 
-    out_path = output or base
-    Path(out_path).write_text(serialized)
-    click.echo(f"Patched env written to {out_path}")
+
+@cli.command(name="validate")
+@click.argument("env_file", type=click.Path(exists=True))
+def validate_cmd(env_file):
+    """Validate ENV_FILE for syntax and key naming issues."""
+    with open(env_file) as f:
+        raw = f.read()
+    result = validate_env_string(raw)
+    if result.is_valid:
+        click.echo(f"{env_file}: OK")
+    else:
+        click.echo(str(result), err=True)
+        sys.exit(1)
 
 
 def main():
-    cli(prog_name="envpatch")
+    cli()
 
 
 if __name__ == "__main__":
