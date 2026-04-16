@@ -64,6 +64,13 @@ def test_audit_diff_records_modified_keys(log_path):
     assert "MOD" in entries[0].keys_modified
 
 
+def test_audit_diff_records_source_and_target(log_path):
+    audit_diff(_make_diff(), source="old.env", target="new.env")
+    entries = load_log(log_path)
+    assert entries[0].source == "old.env"
+    assert entries[0].target == "new.env"
+
+
 def test_audit_merge_returns_none_when_no_log_configured():
     result = audit_merge(_make_merge())
     assert result is None
@@ -80,6 +87,13 @@ def test_audit_merge_records_applied_and_skipped(log_path):
     entries = load_log(log_path)
     assert entries[0].keys_added == ["A"]
     assert entries[0].keys_skipped == ["B"]
+
+
+def test_audit_merge_records_source_and_target(log_path):
+    audit_merge(_make_merge(), source="patch.env", target="base.env")
+    entries = load_log(log_path)
+    assert entries[0].source == "patch.env"
+    assert entries[0].target == "base.env"
 
 
 def test_audit_snapshot_returns_none_when_no_log_configured():
