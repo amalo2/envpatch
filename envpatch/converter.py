@@ -58,11 +58,16 @@ def convert_env(env_string: str, fmt: str) -> ConvertResult:
     return ConvertResult(output=output, fmt=fmt, key_count=len(data), warnings=warnings)
 
 
+def _needs_quoting(v: str) -> bool:
+    """Return True if the value should be wrapped in double quotes in .env format."""
+    return any(c in v for c in (" ", "#", "'", '"'))
+
+
 def dict_to_env(data: Dict[str, str]) -> str:
     """Serialize a plain dict back to .env format."""
     lines = []
     for k, v in data.items():
-        if any(c in v for c in (" ", "#", "'", '"')):
+        if _needs_quoting(v):
             v = f'"{v}"'
         lines.append(f"{k}={v}")
     return "\n".join(lines) + "\n"
