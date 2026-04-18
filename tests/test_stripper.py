@@ -81,3 +81,13 @@ def test_to_summary_string():
     summary = result.to_summary()
     assert "Stripped" in summary
     assert "kept" in summary
+
+
+def test_keys_and_patterns_combined():
+    """Keys and patterns should both contribute to stripped results."""
+    result = strip_keys(SAMPLE, keys=["PORT"], patterns=[r"SECRET"])
+    assert "PORT" not in result.output
+    assert "APP_SECRET" not in result.output
+    assert "PORT" in result.stripped
+    assert "APP_SECRET" in result.stripped
+    assert "APP_NAME=myapp" in result.output
