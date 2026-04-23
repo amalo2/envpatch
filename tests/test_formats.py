@@ -38,6 +38,14 @@ def test_format_diff_json_is_parseable(simple_diff):
     assert "removed" in parsed
 
 
+def test_format_diff_json_contains_changed_keys(simple_diff):
+    """Verify that modified keys appear in the JSON output under 'changed'."""
+    output = format_diff(simple_diff, fmt="json")
+    parsed = json.loads(output)
+    assert "changed" in parsed
+    assert "B" in parsed["changed"]
+
+
 def test_format_diff_patch_is_dotenv_style(simple_diff):
     output = format_diff(simple_diff, fmt="patch")
     assert "=" in output
