@@ -87,3 +87,16 @@ def test_dry_run_does_not_write_files(runner, env_file, tmp_path):
         ],
     )
     assert not (tmp_path / "db.env").exists()
+
+
+def test_split_missing_input_file_exits_nonzero(runner, tmp_path):
+    """Invoking split with a non-existent input file should exit with a non-zero code."""
+    result = runner.invoke(
+        split_cmd,
+        [
+            str(tmp_path / "nonexistent.env"),
+            "--prefix", "DB_",
+            "--output-dir", str(tmp_path),
+        ],
+    )
+    assert result.exit_code != 0
