@@ -19,15 +19,21 @@ from envpatch.patcher import serialize_env
 @click.option("--summary", is_flag=True, default=False, help="Print summary after processing.")
 def prefix_cmd(env_file, prefix, strip, skip_existing, output, summary):
     """Add or remove PREFIX from all keys in ENV_FILE."""
-    with open(env_file) as fh:
-        source = fh.read()
+    try:
+        with open(env_file) as fh:
+            source = fh.read()
+    except OSError as e:
+        raise click.ClickException(f"Could not read env file '{env_file}': {e}")
 
     result = prefix_env(source, prefix, skip_existing=skip_existing, strip=strip)
     serialized = serialize_env(result.env)
 
     if output:
-        with open(output, "w") as fh:
-            fh.write(serialized)
+        try:
+            with open(output, "w") as fh:
+                fh.write(serialized)
+        except OSError as e:
+            raise click.ClickException(f"Could not write to output file '{output}': {e}")
         click.echo(f"Written to {output}")
     else:
         click.echo(serialized, nl=False)
