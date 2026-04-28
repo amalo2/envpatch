@@ -35,10 +35,13 @@ def defaults_cmd(
     in_place: bool,
 ) -> None:
     """Fill missing keys in TARGET from DEFAULTS without touching existing values."""
-    with open(target) as fh:
-        target_text = fh.read()
-    with open(defaults_file) as fh:
-        defaults_text = fh.read()
+    try:
+        with open(target) as fh:
+            target_text = fh.read()
+        with open(defaults_file) as fh:
+            defaults_text = fh.read()
+    except OSError as exc:
+        raise click.ClickException(f"Could not read file: {exc}") from exc
 
     result = apply_defaults(target_text, defaults_text, overwrite=overwrite)
 
@@ -53,8 +56,11 @@ def defaults_cmd(
     merged_text = serialize_env(result.filled)
 
     if in_place:
-        with open(target, "w") as fh:
-            fh.write(merged_text)
+        try:
+            with open(target, "w") as fh:
+                fh.write(merged_text)
+        except OSError as exc:
+            raise click.ClickException(f"Could not write to {target}: {exc}") from exc
         click.echo(f"Written to {target}")
     else:
         click.echo(merged_text, nl=False)
